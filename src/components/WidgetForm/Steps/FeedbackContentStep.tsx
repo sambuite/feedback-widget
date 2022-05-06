@@ -1,7 +1,9 @@
 import { ArrowLeft } from 'phosphor-react';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { FeedbackType, feedbackTypes } from '..';
+import { api } from '../../../services/api';
 import { CloseButton } from '../../CloseButton';
+import { Loading } from '../../Loading';
 import { ScreenshotButton } from '../ScreenshotButton';
 
 interface FeedbackContentStepProps {
@@ -16,17 +18,30 @@ export function FeedbackContentStep({
   onFeedbackSent,
 }: FeedbackContentStepProps) {
   const [screenshot, setScreenshot] = useState<string | null>(null);
-
-  const comment = useRef<string>('');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [comment, setComment] = useState('');
 
   const feedbackTypeInfo = feedbackTypes[feedbackType];
 
-  function handleSubmitFeedback(event: FormEvent) {
+  async function handleSubmitFeedback(event: FormEvent) {
     event.preventDefault();
 
-    console.log({ screenshot, comment: comment.current });
+    setIsSendingFeedback(true);
 
-    onFeedbackSent();
+    try {
+      await api.post('/feedback', {
+        type: feedbackType,
+        comment: comment,
+        screenshot,
+      });
+
+      onFeedbackSent();
+
+      setIsSendingFeedback(false);
+    } catch (error) {
+      console.log(error);
+      setIsSendingFeedback(false);
+    }
   }
 
   return (
@@ -56,7 +71,7 @@ export function FeedbackContentStep({
         <textarea
           className="min-w-[304px] w-full min-h-[112px] text-sm placeholder-zinc-400 text-zinc-100 border-zinc-600 bg-transparent rounded-md focus:border-brand-500 focus:ring-brand-500 focus:ring-1 resize-none focus:outline-none scrollbar-thumb-zinc-700 scrollbar-track-transparent scrollbar-thin"
           placeholder="Conte com detalhes o que está acontecendo..."
-          onChange={(e) => (comment.current = e.target.value)}
+          onChange={(e) => setComment(e.target.value)}
         />
 
         <footer className="flex gap-2 mt-2">
@@ -67,10 +82,10 @@ export function FeedbackContentStep({
 
           <button
             type="submit"
-            disabled={comment.current.length === 0}
+            disabled={comment.length === 0 || isSendingFeedback}
             className="p-2 bg-brand-500 rounded-md border-transparent flex-1 flex justify-center items-center text-sm hover:bg-brand-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-brand-500 transition-colors disabled:opacity-50 disabled:hover:bg-brand-500"
           >
-            Enviar feedback
+            {isSendingFeedback ? <Loading /> : 'Enviar feedback'}
           </button>
         </footer>
       </form>
